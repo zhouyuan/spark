@@ -49,6 +49,7 @@ private[spark] class CoarseGrainedExecutorBackend(
     override val rpcEnv: RpcEnv,
     driverUrl: String,
     executorId: String,
+    numaNodeId: Option[String],
     bindAddress: String,
     hostname: String,
     cores: Int,
@@ -253,6 +254,7 @@ private[spark] object CoarseGrainedExecutorBackend extends Logging {
   case class Arguments(
       driverUrl: String,
       executorId: String,
+      numaNodeId: Option[String],
       bindAddress: String,
       hostname: String,
       cores: Int,
@@ -266,8 +268,8 @@ private[spark] object CoarseGrainedExecutorBackend extends Logging {
     val createFn: (RpcEnv, Arguments, SparkEnv, ResourceProfile) =>
       CoarseGrainedExecutorBackend = { case (rpcEnv, arguments, env, resourceProfile) =>
       new CoarseGrainedExecutorBackend(rpcEnv, arguments.driverUrl, arguments.executorId,
-        arguments.bindAddress, arguments.hostname, arguments.cores, arguments.userClassPath, env,
-        arguments.resourcesFileOpt, resourceProfile)
+        arguments.numaNodeId, arguments.bindAddress, arguments.hostname, arguments.cores,
+        arguments.userClassPath, env, arguments.resourcesFileOpt, resourceProfile)
     }
     run(parseArguments(args, this.getClass.getCanonicalName.stripSuffix("$")), createFn)
     System.exit(0)
@@ -328,8 +330,9 @@ private[spark] object CoarseGrainedExecutorBackend extends Logging {
       }
 
       driverConf.set(EXECUTOR_ID, arguments.executorId)
-      val env = SparkEnv.createExecutorEnv(driverConf, arguments.executorId, arguments.bindAddress,
-        arguments.hostname, arguments.cores, cfg.ioEncryptionKey, isLocal = false)
+      val env = SparkEnv.createExecutorEnv(driverConf, arguments.executorId, arguments.numaNodeId,
+        arguments.bindAddress, arguments.hostname, arguments.cores, cfg.ioEncryptionKey,
+        isLocal = false)
 
       env.rpcEnv.setupEndpoint("Executor",
         backendCreateFn(env.rpcEnv, arguments, env, cfg.resourceProfile))
@@ -343,6 +346,7 @@ private[spark] object CoarseGrainedExecutorBackend extends Logging {
   def parseArguments(args: Array[String], classNameForEntry: String): Arguments = {
     var driverUrl: String = null
     var executorId: String = null
+    var numaNodeId: Option[String] = None
     var bindAddress: String = null
     var hostname: String = null
     var cores: Int = 0
@@ -376,6 +380,9 @@ private[spark] object CoarseGrainedExecutorBackend extends Logging {
         case ("--app-id") :: value :: tail =>
           appId = value
           argv = tail
+        case ("--numa-node-id") :: value :: tail =>
+          numaNodeId = Some(value.trim)
+          argv = tail
         case ("--worker-url") :: value :: tail =>
           // Worker url is used in spark standalone mode to enforce fate-sharing with worker
           workerUrl = Some(value)
@@ -408,7 +415,7 @@ private[spark] object CoarseGrainedExecutorBackend extends Logging {
       bindAddress = hostname
     }
 
-    Arguments(driverUrl, executorId, bindAddress, hostname, cores, appId, workerUrl,
+    Arguments(driverUrl, executorId, numaNodeId, bindAddress, hostname, cores, appId, workerUrl,
       userClassPath, resourcesFileOpt, resourceProfileId)
   }
 
@@ -422,6 +429,7 @@ private[spark] object CoarseGrainedExecutorBackend extends Logging {
       |   --driver-url <driverUrl>
       |   --executor-id <executorId>
       |   --bind-address <bindAddress>
+      |   --numa-node-id <numaNodeId>
       |   --hostname <hostname>
       |   --cores <cores>
       |   --resourcesFile <fileWithJSONResourceInformation>
