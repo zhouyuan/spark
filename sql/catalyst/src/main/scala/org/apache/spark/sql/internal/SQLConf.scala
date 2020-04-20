@@ -334,6 +334,13 @@ object SQLConf {
     .booleanConf
     .createWithDefault(true)
 
+  val FORCE_HASHJOIN = buildConf("spark.sql.join.forceHashJoin")
+    .internal()
+    .doc("When true, force to use shuffle hash join.")
+    .version("2.0.0")
+    .booleanConf
+    .createWithDefault(false)
+
   val RADIX_SORT_ENABLED = buildConf("spark.sql.sort.enableRadixSort")
     .internal()
     .doc("When true, enable use of radix sort when possible. Radix sort is much faster but " +
@@ -2886,6 +2893,8 @@ class SQLConf extends Serializable with Logging {
     getConf(ADVANCED_PARTITION_PREDICATE_PUSHDOWN)
 
   def preferSortMergeJoin: Boolean = getConf(PREFER_SORTMERGEJOIN)
+
+  def forceHashJoin: Boolean = getConf(FORCE_HASHJOIN)
 
   def enableRadixSort: Boolean = getConf(RADIX_SORT_ENABLED)
 
