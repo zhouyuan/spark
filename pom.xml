@@ -110,6 +110,7 @@
   </modules>
 
   <properties>
+    <oap.common.version>0.8.0</oap.common.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <java.version>1.8</java.version>
@@ -342,6 +343,11 @@
   </dependencies>
   <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>com.intel</groupId>
+        <artifactId>oap-common</artifactId>
+        <version>${oap.common.version}</version>
+      </dependency>
       <dependency>
         <groupId>org.apache.spark</groupId>
         <artifactId>spark-tags_${scala.binary.version}</artifactId>
