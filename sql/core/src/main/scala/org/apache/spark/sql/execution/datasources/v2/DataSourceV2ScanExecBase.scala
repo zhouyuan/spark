@@ -32,6 +32,7 @@ import org.apache.spark.util.Utils
 trait DataSourceV2ScanExecBase extends LeafExecNode {
 
   override lazy val metrics = Map(
+    "scanTime" -> SQLMetrics.createTimingMetric(sparkContext, "BatchScan elapse time"),
     "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows"))
 
   def scan: Scan

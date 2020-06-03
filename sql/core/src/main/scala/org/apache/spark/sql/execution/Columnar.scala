@@ -18,6 +18,7 @@
 package org.apache.spark.sql.execution
 
 import scala.collection.JavaConverters._
+import java.util.concurrent.TimeUnit._
 
 import org.apache.spark.{broadcast, TaskContext}
 import org.apache.spark.rdd.RDD
@@ -32,6 +33,7 @@ import org.apache.spark.sql.execution.vectorized.{OffHeapColumnVector, OnHeapCol
 import org.apache.spark.sql.internal.SQLConf
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.vectorized.{ColumnarBatch, ColumnVector}
+import org.apache.spark.sql.catalyst.util.DateTimeConstants.NANOS_PER_MILLIS
 
 /**
  * Holds a user defined rule that can be used to inject columnar implementations of various
@@ -72,20 +74,24 @@ case class ColumnarToRowExec(child: SparkPlan) extends UnaryExecNode with Codege
 
   override lazy val metrics: Map[String, SQLMetric] = Map(
     "numOutputRows" -> SQLMetrics.createMetric(sparkContext, "number of output rows"),
-    "numInputBatches" -> SQLMetrics.createMetric(sparkContext, "number of input batches")
+    "numInputBatches" -> SQLMetrics.createMetric(sparkContext, "number of input batches"),
+    "timeUsed" -> SQLMetrics.createTimingMetric(sparkContext, "time used to converting")
   )
 
   override def doExecute(): RDD[InternalRow] = {
     val numOutputRows = longMetric("numOutputRows")
     val numInputBatches = longMetric("numInputBatches")
+    val timeUsed = longMetric("timeUsed")
     // This avoids calling `output` in the RDD closure, so that we don't need to include the entire
     // plan (this) in the closure.
     val localOutput = this.output
+    val beforeConvert = System.nanoTime()
     child.executeColumnar().mapPartitionsInternal { batches =>
       val toUnsafe = UnsafeProjection.create(localOutput, localOutput)
       batches.flatMap { batch =>
         numInputBatches += 1
         numOutputRows += batch.numRows()
+        timeUsed += NANOSECONDS.toMillis(System.nanoTime() - beforeConvert)
         batch.rowIterator().asScala.map(toUnsafe)
       }
     }
@@ -134,6 +140,7 @@ case class ColumnarToRowExec(child: SparkPlan) extends UnaryExecNode with Codege
     // metrics
     val numOutputRows = metricTerm(ctx, "numOutputRows")
     val numInputBatches = metricTerm(ctx, "numInputBatches")
+    val timeUsed = metricTerm(ctx, "timeUsed")
 
     val columnarBatchClz = classOf[ColumnarBatch].getName
     val batch = ctx.addMutableState(columnarBatchClz, "batch")
@@ -148,15 +155,18 @@ case class ColumnarToRowExec(child: SparkPlan) extends UnaryExecNode with Codege
     }.unzip
 
     val nextBatch = ctx.freshName("nextBatch")
+    val beforeConvert = ctx.freshName("beforeConvert")
     val nextBatchFuncName = ctx.addNewFunction(nextBatch,
       s"""
          |private void $nextBatch() throws java.io.IOException {
          |  if ($input.hasNext()) {
+         |    long $beforeConvert = System.nanoTime();
          |    $batch = ($columnarBatchClz)$input.next();
          |    $numInputBatches.add(1);
          |    $numOutputRows.add($batch.numRows());
          |    $idx = 0;
          |    ${columnAssigns.mkString("", "\n", "\n")}
+         |    $timeUsed.add((System.nanoTime() - $beforeConvert) / $NANOS_PER_MILLIS);
          |  }
          |}""".stripMargin)
 

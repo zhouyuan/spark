@@ -45,7 +45,8 @@ case class BatchScanExec(
   override lazy val readerFactory: PartitionReaderFactory = batch.createReaderFactory()
 
   override lazy val inputRDD: RDD[InternalRow] = {
-    new DataSourceRDD(sparkContext, partitions, readerFactory, supportsColumnar)
+    val scanTime = longMetric("scanTime")
+    new DataSourceRDD(sparkContext, partitions, readerFactory, supportsColumnar, scanTime)
   }
 
   override def doCanonicalize(): BatchScanExec = {
