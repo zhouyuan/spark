@@ -276,7 +276,7 @@ object InjectRuntimeFilter extends Rule[LogicalPlan] with PredicateHelper with J
     var filterCounter = 0
     val numFilterThreshold = conf.getConf(SQLConf.RUNTIME_FILTER_NUMBER_THRESHOLD)
     plan transformUp {
-      case join @ ExtractEquiJoinKeys(joinType, leftKeys, rightKeys, _, _, left, right, hint) =>
+      case join @ ExtractEquiJoinKeys(joinType, leftKeys, rightKeys, _, left, right, hint) =>
         var newLeft = left
         var newRight = right
         (leftKeys, rightKeys).zipped.foreach((l, r) => {
