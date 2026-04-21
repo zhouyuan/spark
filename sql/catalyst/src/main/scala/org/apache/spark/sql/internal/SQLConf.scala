@@ -3892,6 +3892,24 @@ object SQLConf {
       .booleanConf
       .createWithDefault(false)
 
+  val ROLLUP_PREFIX_AGG_ENABLED =
+    buildConf("spark.sql.optimizer.rollupPrefixAgg.enabled")
+      .internal()
+      .doc("When true, Spark may plan GROUP BY ROLLUP as staged prefix aggregations to avoid " +
+        "Expand-based row multiplication. This is an experimental optimization.")
+      .version("3.5.0")
+      .booleanConf
+      .createWithDefault(false)
+
+  val ROLLUP_PREFIX_AGG_MIN_KEYS =
+    buildConf("spark.sql.optimizer.rollupPrefixAgg.minKeys")
+      .internal()
+      .doc("Minimum number of rollup grouping keys required to enable rollupPrefixAgg optimization.")
+      .version("3.5.0")
+      .intConf
+      .checkValue(_ >= 0, "must be >= 0")
+      .createWithDefault(5)
+
   val UPDATE_PART_STATS_IN_ANALYZE_TABLE_ENABLED =
     buildConf("spark.sql.statistics.updatePartitionStatsInAnalyzeTable.enabled")
       .doc("When this config is enabled, Spark will also update partition statistics in analyze " +
@@ -7522,6 +7540,10 @@ class SQLConf extends Serializable with Logging with SqlApiConf {
   def maxVersionsToDeletePerMaintenance: Int = getConf(MAX_VERSIONS_TO_DELETE_PER_MAINTENANCE)
 
   def ratioExtraSpaceAllowedInCheckpoint: Double = getConf(RATIO_EXTRA_SPACE_ALLOWED_IN_CHECKPOINT)
+
+  def rollupPrefixAggEnabled: Boolean = getConf(ROLLUP_PREFIX_AGG_ENABLED)
+
+  def rollupPrefixAggMinKeys: Int = getConf(ROLLUP_PREFIX_AGG_MIN_KEYS)
 
   def maxBatchesToRetainInMemory: Int = getConf(MAX_BATCHES_TO_RETAIN_IN_MEMORY)
 

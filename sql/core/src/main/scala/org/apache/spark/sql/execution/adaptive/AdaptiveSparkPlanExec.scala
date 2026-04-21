@@ -42,6 +42,7 @@ import org.apache.spark.sql.classic.SparkSession
 import org.apache.spark.sql.errors.QueryExecutionErrors
 import org.apache.spark.sql.execution._
 import org.apache.spark.sql.execution.adaptive.AdaptiveSparkPlanExec._
+import org.apache.spark.sql.execution.aggregate.OptimizeRollupPrefixAgg
 import org.apache.spark.sql.execution.bucketing.{CoalesceBucketsInJoin, DisableUnnecessaryBucketedScan}
 import org.apache.spark.sql.execution.columnar.InMemoryTableScanLike
 import org.apache.spark.sql.execution.exchange._
@@ -126,6 +127,7 @@ case class AdaptiveSparkPlanExec(
       ValidateSparkPlan,
       ReplaceHashWithSortAgg,
       RemoveRedundantSorts,
+      OptimizeRollupPrefixAgg,
       RemoveRedundantWindowGroupLimits,
       DisableUnnecessaryBucketedScan,
       OptimizeSkewedJoin(ensureRequirements)
