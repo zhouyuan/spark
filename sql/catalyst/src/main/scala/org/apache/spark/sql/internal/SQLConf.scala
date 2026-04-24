@@ -1849,6 +1849,16 @@ object SQLConf {
     .version("3.3.0")
     .booleanConf
     .createWithDefault(false)
+  val PUSH_PARTIAL_AGG_THROUGH_EXPAND_ENABLED =
+    buildConf("spark.sql.execution.pushPartialAggThroughExpand")
+      .internal()
+      .doc("When true, push down partial aggregation through Expand operator to reduce " +
+        "data size before expansion. This is beneficial for queries with GROUPING SETS, " +
+        "CUBE, or ROLLUP.")
+      .version("4.0.0")
+      .booleanConf
+      .createWithDefault(true)
+
 
   val USE_PARTITION_EVALUATOR = buildConf("spark.sql.execution.usePartitionEvaluator")
     .internal()

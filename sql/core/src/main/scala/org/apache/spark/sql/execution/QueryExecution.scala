@@ -449,6 +449,9 @@ object QueryExecution {
       // `ReplaceHashWithSortAgg` needs to be added after `EnsureRequirements` to guarantee the
       // sort order of each node is checked to be valid.
       ReplaceHashWithSortAgg,
+      // `PushPartialAggThroughExpand` pushes down partial aggregation through Expand to reduce
+      // data size before expansion (for GROUPING SETS, CUBE, ROLLUP queries).
+      PushPartialAggThroughExpand,
       // `RemoveRedundantSorts` and `RemoveRedundantWindowGroupLimits` needs to be added after
       // `EnsureRequirements` to guarantee the same number of partitions when instantiating
       // PartitioningCollection.
